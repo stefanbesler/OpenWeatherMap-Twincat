@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="OpenWeatherMapRequest" Id="{f17a5064-8416-4c04-9856-ade6756db10d}">
+    <Declaration><![CDATA[{attribute 'pack_mode' := '1'}
+TYPE INTERNAL OpenWeatherMapRequest :
+STRUCT
+  TokenLength : INT;
+  Token : STRING(80);
+  ZipCodeLength : INT;
+  ZipCode : STRING(9);
+  CountryCodeLength : INT;
+  CountryCode : STRING(4);  
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

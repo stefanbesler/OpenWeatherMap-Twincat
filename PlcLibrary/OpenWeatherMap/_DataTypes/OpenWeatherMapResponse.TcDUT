@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="OpenWeatherMapResponse" Id="{1ff4a02d-7eec-4713-9ee4-8c7bf039cd72}">
+    <Declaration><![CDATA[{attribute 'pack_mode' := '1'}
+TYPE INTERNAL OpenWeatherMapResponse :
+STRUCT
+   {attribute 'hide'}
+   Status : INT;
+   
+   {attribute 'hide'}
+   Exception : STRING(255);   
+  
+   CityName : STRING(255);
+   Condition : STRING(255);
+   TemperatureInCelsius : LREAL;
+   FeelsLikeInCelsius : LREAL;
+   PressureInBar : LREAL;
+   RelativeHumidityInPercent : LREAL;
+   MinimumTemperatureInCelsius : LREAL;
+   MaximumTemperatureInCelsius : LREAL;
+   SeaLevelPressureInBar : LREAL;
+   GroundLevelPressureInBar : LREAL;
+   WindSpeedInMeterPerSecond : LREAL;
+   WindDirectionInDegree : LREAL;
+   WindGustInMeterPerSecond : LREAL;
+   CloudinessInPercent : LREAL;
+   RainfallLastHourInMillimeter : LREAL;
+   RainfallLastThreeHoursInMillimeter : LREAL;
+   SnowfallLastHourInMillimeter : LREAL;
+   SnowfallLastThreeHoursInMillimeter : LREAL;
+   SunriseUtc : LWORD;
+   SunsetUtc : LWORD;
+   UtcOffsetInMillisecond : LWORD;
+   FetchedAtUtc : LWORD;
+   MeasuredAtUtc : LWORD;
+   CityId : DINT;   
+   
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

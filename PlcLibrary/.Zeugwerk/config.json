@@ -1,0 +1,25 @@
+{
+  "fileversion": 1,
+  "solution": "OpenWeatherMap.sln",
+  "projects": [
+    {
+      "name": "OpenWeatherMap",
+      "plcs": [
+        {
+          "version": "1.0.0",
+          "distributor-name": "Stefan Besler",
+          "name": "OpenWeatherMap",
+          "title": "OpenWeatherMap",
+          "type": "Library",
+          "packages": [],
+          "references": {
+            "*": [
+              "Tc2_Standard=*",
+              "Tc2_System=*"
+            ]
+          }
+        }
+      ]
+	}
+  ]
+}

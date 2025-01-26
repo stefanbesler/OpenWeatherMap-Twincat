@@ -1,0 +1,330 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="OpenWeatherMapClient" Id="{7e1e9724-26e2-0084-1004-42ca9b5de5a8}" SpecialFunc="None">
+    <Declaration><![CDATA[/// This the main class of the library. It represents a OpenWeatherMap app and
+/// is tied to a unique API token. When constructing the object it is mandatory to pass
+/// an `app-token``.
+///
+/// Here's a simple example, which requests the current data for 'Innsbruck, AT'.
+/// The actual action of sending the notification is triggered by [RequestWeatherByZipCodeAsync](xref:OpenWeatherMap.OpenWeatherMapClient#RequestWeatherByZipCodeAsync).
+/// The ´Async´ Suffix in this method indicates that this action has to be waited for by checking for ´NOT _openWeatherMapClient.Busy´ before
+/// sending another request.
+///
+/// ```sti
+/// PROGRAM MAIN
+/// VAR
+///   _send : BOOL; // boolean, which can be triggered to send a message
+///   _openWeatherMapClient : OpenWeatherMap.OpenWeatherMapClient('<your_openweathermap_apptoken>'); 
+/// END_VAR
+/// ```
+/// ```std
+/// IF _send
+/// THEN
+///   _send := FALSE;
+///   _openWeatherMapClient.RequestWeatherByZipCodeAsync('6020', 'AT');
+/// END_IF
+///
+/// _openWeatherMapClient.Cyclic();
+/// ```
+{attribute 'conditionalshow_all_locals'}
+{attribute 'no_explicit_call' := 'This FB is a CLASS and must be accessed using methods and/or properties'}
+{attribute 'hide_all_locals'}
+FUNCTION_BLOCK OpenWeatherMapClient
+VAR
+  _busy : BOOL;
+  _error : BOOL;
+  _errorMessage : STRING(255);
+  
+  _request : OpenWeatherMapRequest;
+  _response : OpenWeatherMapResponse;
+  
+  _server : Tc2_System.ADSRDWRTEX;
+END_VAR
+VAR CONSTANT
+  _defaultHost : STRING := '127.0.0.1.1.1';
+  _defaultPort : UINT := 25734;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Property Name="Busy" Id="{72c62e30-e885-4eb2-98b1-f1d26e618bab}">
+      <Declaration><![CDATA[/// This property can be used to check if the client is ready for sending request. If the client is not 
+/// ready or an error occurs during sending (e.g. not internet connection, OpenWeatherMap Twincat Service is not running, ...)
+/// the property [Error](xref:OpenWeatherMap.OpenWeatherMapClient#Error) returns `true`.
+{attribute 'monitoring' := 'call'}
+PROPERTY Busy : BOOL]]></Declaration>
+      <Get Name="Get" Id="{638df4c4-ce17-46ec-9ad7-929d45026307}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Busy := _busy;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{72c23c85-7457-4c77-954b-13dc2bbf6698}">
+        <Declaration><![CDATA[PROTECTED VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_busy := Busy;
+
+IF _busy
+THEN
+  _error := FALSE;
+END_IF]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Cyclic" Id="{426e1ace-8aa7-0373-078f-f6c08bda3162}">
+      <Declaration><![CDATA[/// This method has to be called cyclically and takes care of the communication with the `OpenWeatherMap Twincat Service`, which is reached 
+/// via [Host](xref:OpenWeatherMap.OpenWeatherMapClient#Host) and [Port](xref:OpenWeatherMap.OpenWeatherMapClient#Port).
+/// You can use the properties [Busy](xref:OpenWeatherMap.OpenWeatherMapClient#Busy) and [Error](xref:OpenWeatherMap.OpenWeatherMapClient#Error) to check weather an
+/// operation was successful (`NOT Busy AND NOT Error`) or failed (`Error`), respectively.
+METHOD Cyclic
+VAR_INST
+  errorTrig : Tc2_Standard.R_TRIG;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Busy
+THEN
+  RETURN;
+END_IF
+
+_server(IDXOFFS:=0, 
+        WRITELEN:=SIZEOF(_request),
+        SRCADDR:=ADR(_request),
+        WRTRD:=TRUE, 
+        TMOUT:=T#5S,
+        ERR=>,
+        BUSY=>,
+        ERRID=>);
+  
+IF _server.ERR // fallback to proxy
+THEN
+  Error := TRUE;
+  ErrorMessage := Tc2_Standard.CONCAT('Error Code: ', UDINT_TO_STRING(_server.ERRID));
+ELSIF NOT _server.BUSY 
+THEN
+  Busy := FALSE;
+
+  IF _response.Status = 0
+  THEN
+    Error := TRUE;
+    ErrorMessage := 'No data received';  
+  ELSIF _response.Status > 0
+  THEN
+    Error := TRUE;
+    ErrorMessage := _response.Exception;
+	END_IF
+
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Error" Id="{e66821e4-2ee0-4372-9ea9-1eb4dd33a529}">
+      <Declaration><![CDATA[/// Returns `true` if any error occured when calling an `XXX_Async` method of this object. The details of the error
+/// are available by checking the proeprty
+{attribute 'monitoring' := 'call'}
+PROPERTY Error : BOOL]]></Declaration>
+      <Get Name="Get" Id="{e7a38956-1dfd-4ffd-92e4-bca9edabac1a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Error := _error;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{32d3bb0b-6ab6-467b-877b-dec253655bc9}">
+        <Declaration><![CDATA[PROTECTED VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_error := Error;
+
+IF _error
+THEN
+  _busy := FALSE;
+END_IF]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="ErrorMessage" Id="{fb1419dd-8959-4c52-a678-e27eff869570}">
+      <Declaration><![CDATA[/// Only valid if `Error=TRUE`, returns the explanation why the call of an `XXX_Async` method failed.
+{attribute 'monitoring' := 'call'}
+PROPERTY ErrorMessage : STRING(255)]]></Declaration>
+      <Get Name="Get" Id="{8cc0de4e-82b4-4158-84b4-5f694a2b39d8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF _error
+THEN
+  ErrorMessage := _errorMessage;
+END_IF]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{c440d5c4-cbac-45f0-a41e-5d3d4e4bd3d8}">
+        <Declaration><![CDATA[PROTECTED VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_errorMessage := ErrorMessage;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="FB_init" Id="{35c9eeb9-61ee-4ff2-8c41-88a6a762ab87}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+  
+  /// The OpenWeatherMap API token
+  token : STRING;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.Token := token;
+THIS^.Host := _defaultHost;
+THIS^.Port := _defaultPort;
+
+Reset();]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Host" Id="{d06b2e65-bd92-4aa0-a8cf-123040bf4d63}">
+      <Declaration><![CDATA[/// Returns the AMS Net Id of the `OpenWeatherMap Twincat Service`. Defaults to localhost
+PROPERTY Host : STRING]]></Declaration>
+      <Get Name="Get" Id="{a03127e3-650c-4e7b-943a-977d03c8073e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Host := _server.NETID;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{c8ced228-6a9e-4ba5-b049-2d5511e74bd0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_server(WRTRD := FALSE,
+       NETID := Host,
+       BUSY=>,
+       ERR=>,
+       ERRID=>);]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="Port" Id="{6d99f1c3-57ba-40cf-a01f-00d80a87bd49}">
+      <Declaration><![CDATA[PROPERTY Port : UINT]]></Declaration>
+      <Get Name="Get" Id="{62cd6a40-8a44-4f9c-bdf5-2065126bdfe3}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Port := _server.PORT;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{e9a96dd4-dec0-4ef1-bb24-acc78eea7c5b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_server(WRTRD := FALSE,
+       PORT := Port,
+       BUSY=>,
+       ERR=>,
+       ERRID=>);]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="RequestWeatherByZipCodeAsync" Id="{2514d27a-339b-498f-a48f-770ba2a832fe}">
+      <Declaration><![CDATA[METHOD RequestWeatherByZipCodeAsync
+VAR_IN_OUT CONSTANT
+  zipCode : STRING(9);
+  countryCode : STRING(4);
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Busy
+THEN
+  _request.ZipCodeLength := Tc2_Standard.LEN(zipCode);
+  _request.ZipCode := zipCode;
+  _request.CountryCodeLength := Tc2_Standard.LEN(countryCode);
+  _request.CountryCode := countryCode;
+  
+  _response.Status := 0;
+  
+  _server(WRTRD := FALSE,
+         IDXGRP:=0,
+         DESTADDR:=ADR(_response),
+         READLEN:=SIZEOF(_response),
+         TMOUT:=TIME#10S,
+         BUSY=>,
+         ERR=>,
+         ERRID=>);    
+  Busy := TRUE;
+ELSE
+  Error := TRUE;
+  _errorMessage := 'Client can not executed parallel requests!';
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset" Id="{0f0aec67-27b6-49f3-bec9-7f030e47c04d}">
+      <Declaration><![CDATA[/// Resets client to default values
+METHOD Reset
+VAR
+  token : STRING;
+  host : STRING;
+  port : UINT;  
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[token := THIS^.Token;
+host := THIS^.Host;
+port := THIS^.Port;
+
+Tc2_System.MEMSET(ADR(_request), 0, SIZEOF(_request));
+
+THIS^.Token := token;
+THIS^.Host := _defaultHost;
+THIS^.Port := _defaultPort;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Token" Id="{bf5e10e9-5772-4f05-993b-dd3d2d60441b}">
+      <Declaration><![CDATA[PROPERTY Token : STRING]]></Declaration>
+      <Get Name="Get" Id="{d6e8aca1-e3e6-4f04-8a9f-bce9c98cf5a4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Token := _request.Token;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{1a083cd8-6ea7-4bd2-9213-fc1474c0c5d4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[_request.Token := Token;
+_request.TokenLength := Tc2_Standard.LEN(_request.Token);]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="Weather" Id="{0269ec4f-7f31-45e8-8e2c-80775300eb05}">
+      <Declaration><![CDATA[{attribute 'monitoring' := 'call'}
+PROPERTY Weather : REFERENCE TO OpenWeatherMapResponse]]></Declaration>
+      <Get Name="Get" Id="{56d9b21d-c708-4b95-bf8a-68056613ad6d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF _busy OR_ELSE _response.Status = 0
+THEN
+  Weather REF= 0;
+  RETURN;
+END_IF
+
+Weather REF= _response;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

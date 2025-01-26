@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="MAIN" Id="{33b3b19c-906c-4ad0-afd2-e113619d9985}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+  _send : BOOL; // boolean, which can be triggered to send a message
+  _openWeatherMapClient : OpenWeatherMap.OpenWeatherMapClient('<your_token>');   
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF _send
+THEN
+  _send := FALSE;
+  _openWeatherMapClient.RequestWeatherByZipCodeAsync('6020', 'AT');
+END_IF
+
+_openWeatherMapClient.Cyclic();]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
